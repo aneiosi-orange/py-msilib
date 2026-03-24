@@ -99,7 +99,7 @@ elif [ "$IS_MINGW" == "1" ]; then
             if [[ $line != *sys_platform* ]] || \
                [[ $line == *sys_platform*==*win32* ]]; then
                 name=$(echo "$line" | awk -F '[><=]+' '{ print $1 }')
-                if [ "$name" == "python-msilib" ]; then name="msilib"; fi
+                if [ "$name" == "py-msilib" ]; then name="msilib"; fi
                 if ! printf '%s\0' "${pkgs[@]}" | grep -Fxqz -- "$name"; then
                     pkgs+=("$MINGW_PACKAGE_PREFIX-python-$name")
                 fi

@@ -11,102 +11,32 @@ import re
 import string
 from tempfile import mkstemp
 
-from msilib._msi import (
-    MSICOLINFO_NAMES,
-    MSICOLINFO_TYPES,
-    MSIDBOPEN_CREATE,
-    MSIDBOPEN_CREATEDIRECT,
-    MSIDBOPEN_DIRECT,
-    MSIDBOPEN_PATCHFILE,
-    MSIDBOPEN_READONLY,
-    MSIDBOPEN_TRANSACT,
-    MSIMODIFY_ASSIGN,
-    MSIMODIFY_DELETE,
-    MSIMODIFY_INSERT,
-    MSIMODIFY_INSERT_TEMPORARY,
-    MSIMODIFY_MERGE,
-    MSIMODIFY_REFRESH,
-    MSIMODIFY_REPLACE,
-    MSIMODIFY_SEEK,
-    MSIMODIFY_UPDATE,
-    MSIMODIFY_VALIDATE,
-    MSIMODIFY_VALIDATE_DELETE,
-    MSIMODIFY_VALIDATE_FIELD,
-    MSIMODIFY_VALIDATE_NEW,
-    PID_APPNAME,
-    PID_AUTHOR,
-    PID_CHARCOUNT,
-    PID_CODEPAGE,
-    PID_COMMENTS,
-    PID_CREATE_DTM,
-    PID_KEYWORDS,
-    PID_LASTAUTHOR,
-    PID_LASTPRINTED,
-    PID_LASTSAVE_DTM,
-    PID_PAGECOUNT,
-    PID_REVNUMBER,
-    PID_SECURITY,
-    PID_SUBJECT,
-    PID_TEMPLATE,
-    PID_TITLE,
-    PID_WORDCOUNT,
-    CreateRecord,
-    FCICreate,
-    MSIError,
-    OpenDatabase,
-    UuidCreate,
-)
+from msilib._msi import MSICOLINFO, MSIDBOPEN, MSIDBOPEN_PATCHFILE, MSIMODIFY, PID, create_record
 
-__version__ = importlib.metadata.version("python-msilib")
+# from msilib._msi import (
+#     FCICreate,
+#     MSIError,
+#     OpenDatabase,
+#     UuidCreate,
+# )
+
+__version__ = importlib.metadata.version("py-msilib")
 
 __all__ = [
     "CAB",
-    "MSICOLINFO_NAMES",
-    "MSICOLINFO_TYPES",
-    "MSIDBOPEN_CREATE",
-    "MSIDBOPEN_CREATEDIRECT",
-    "MSIDBOPEN_DIRECT",
+    "MSICOLINFO",
+    "MSIDBOPEN",
     "MSIDBOPEN_PATCHFILE",
-    "MSIDBOPEN_READONLY",
-    "MSIDBOPEN_TRANSACT",
-    "MSIMODIFY_ASSIGN",
-    "MSIMODIFY_DELETE",
-    "MSIMODIFY_INSERT",
-    "MSIMODIFY_INSERT_TEMPORARY",
-    "MSIMODIFY_MERGE",
-    "MSIMODIFY_REFRESH",
-    "MSIMODIFY_REPLACE",
-    "MSIMODIFY_SEEK",
-    "MSIMODIFY_UPDATE",
-    "MSIMODIFY_VALIDATE",
-    "MSIMODIFY_VALIDATE_DELETE",
-    "MSIMODIFY_VALIDATE_FIELD",
-    "MSIMODIFY_VALIDATE_NEW",
-    "PID_APPNAME",
-    "PID_AUTHOR",
-    "PID_CHARCOUNT",
-    "PID_CODEPAGE",
-    "PID_COMMENTS",
-    "PID_CREATE_DTM",
-    "PID_KEYWORDS",
-    "PID_LASTAUTHOR",
-    "PID_LASTPRINTED",
-    "PID_LASTSAVE_DTM",
-    "PID_PAGECOUNT",
-    "PID_REVNUMBER",
-    "PID_SECURITY",
-    "PID_SUBJECT",
-    "PID_TEMPLATE",
-    "PID_TITLE",
-    "PID_WORDCOUNT",
+    "MSIMODIFY",
+    "PID",
     "Binary",
     "Control",
-    "CreateRecord",
     "Dialog",
     "Directory",
     "FCICreate",
     "Feature",
     "MSIError",
+    "MSI_Col_Info",
     "OpenDatabase",
     "RadioButtonGroup",
     "Table",
@@ -115,6 +45,7 @@ __all__ = [
     "add_stream",
     "add_tables",
     "change_sequence",
+    "create_record",
     "datasizemask",
     "gen_uuid",
     "init_database",
@@ -235,8 +166,8 @@ def change_sequence(
 
 def add_data(db, table, values) -> None:
     v = db.OpenView(f"SELECT * FROM `{table}`")
-    count = v.GetColumnInfo(MSICOLINFO_NAMES).GetFieldCount()
-    r = CreateRecord(count)
+    count = v.GetColumnInfo(MSI_Col_Info.NAMES).GetFieldCount()
+    r = create_record(count)
     for value in values:
         assert len(value) == count, value
         for i in range(count):
@@ -253,7 +184,7 @@ def add_data(db, table, values) -> None:
                 msg = f"Unsupported type {field.__class__.__name__}"
                 raise TypeError(msg)
         try:
-            v.Modify(MSIMODIFY_INSERT, r)
+            v.Modify(MSIMODIFY.INSERT, r)
         except Exception:  # noqa: BLE001
             msg = f"Could not insert {values!r} into {table}"
             raise MSIError(msg) from None
@@ -264,7 +195,7 @@ def add_data(db, table, values) -> None:
 
 def add_stream(db, name, path) -> None:
     v = db.OpenView(f"INSERT INTO _Streams (Name, Data) VALUES ('{name}', ?)")
-    r = CreateRecord(1)
+    r = create_record(1)
     r.SetStream(1, path)
     v.Execute(r)
     v.Close()
@@ -277,35 +208,35 @@ def init_database(
         os.unlink(name)
     ProductCode = ProductCode.upper()
     # Create the database
-    db = OpenDatabase(name, MSIDBOPEN_CREATE)
+    db = OpenDatabase(name, MSIDBOPEN.CREATE)
     # Create the tables
     for t in schema.tables:
         t.create(db)
     # Fill the validation table
-    add_data(db, "_Validation", schema._Validation_records)  # noqa: SLF001
+    add_data(db, "_Validation", schema._Validation_records)
     # Initialize the summary information, allowing at most 20 properties
     si = db.GetSummaryInformation(20)
-    si.SetProperty(PID_TITLE, "Installation Database")
-    si.SetProperty(PID_SUBJECT, ProductName)
-    si.SetProperty(PID_AUTHOR, Manufacturer)
+    si.SetProperty(PID.TITLE, "Installation Database")
+    si.SetProperty(PID.SUBJECT, ProductName)
+    si.SetProperty(PID.AUTHOR, Manufacturer)
     # https://learn.microsoft.com/en-us/windows/win32/msi/template-summary
     if AMD64:
-        si.SetProperty(PID_TEMPLATE, "x64;1033")
+        si.SetProperty(PID.TEMPLATE, "x64;1033")
     elif ARM64:
-        si.SetProperty(PID_TEMPLATE, "Arm64;1033")
+        si.SetProperty(PID.TEMPLATE, "Arm64;1033")
     else:
-        si.SetProperty(PID_TEMPLATE, "Intel;1033")
-    si.SetProperty(PID_REVNUMBER, gen_uuid())
+        si.SetProperty(PID.TEMPLATE, "Intel;1033")
+    si.SetProperty(PID.REVNUMBER, gen_uuid())
     # https://learn.microsoft.com/en-us/windows/win32/msi/word-count-summary
     # 2 = long file names, compressed, original media
-    si.SetProperty(PID_WORDCOUNT, 2)
+    si.SetProperty(PID.WORDCOUNT, 2)
     # https://learn.microsoft.com/en-us/windows/win32/msi/page-count-summary
     # https://learn.microsoft.com/en-us/windows/win32/msi/using-64-bit-windows-installer-packages
     if ARM64:
-        si.SetProperty(PID_PAGECOUNT, 500)  # minimum of Windows Installer 5.0
+        si.SetProperty(PID.PAGECOUNT, 500)  # minimum of Windows Installer 5.0
     else:
-        si.SetProperty(PID_PAGECOUNT, 200)  # minimum of Windows Installer 2.0
-    si.SetProperty(PID_APPNAME, "Python MSI Library")
+        si.SetProperty(PID.PAGECOUNT, 200)  # minimum of Windows Installer 2.0
+    si.SetProperty(PID.APPNAME, "Python MSI Library")
     # XXX more properties
     si.Persist()
     add_data(

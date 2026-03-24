@@ -5,10 +5,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-// clang-format off
 #include <windows.h>
-// clang-format on
-#include "include/pythoncapi_compat.h"
 #include <fci.h>
 #include <fcntl.h>
 #include <msi.h>
@@ -16,26 +13,9 @@
 #include <msiquery.h>
 #include <rpc.h>
 
-/*[clinic input]
-module _msi
-class _msi.Record "msiobj *" "&record_Type"
-class _msi.SummaryInformation "msiobj *" "&summary_Type"
-class _msi.View "msiobj *" "&msiview_Type"
-class _msi.Database "msiobj *" "&msidb_Type"
-[clinic start generated code]*/
-/*[clinic end generated code: output=da39a3ee5e6b4b0d input=89a3605762cf4bdc]*/
-
 static PyObject* MSIError;
 
-/*[clinic input]
-_msi.UuidCreate
-
-Return the string representation of a new unique identifier.
-[clinic start generated code]*/
-
-static PyObject* _msi_UuidCreate_impl(PyObject* module)
-/*[clinic end generated code: output=534ecf36f10af98e input=168024ab4b3e832b]*/
-{
+static PyObject* _msi_UuidCreate_impl(PyObject* module) {
     UUID result;
     wchar_t* cresult;
     PyObject* oresult;
@@ -61,8 +41,7 @@ static PyObject* _msi_UuidCreate_impl(PyObject* module)
 }
 
 /* Helper for converting file names from UTF-8 to wchat_t*.  */
-static wchar_t* utf8_to_wchar(const char* s, int* err)
-{
+static wchar_t* utf8_to_wchar(const char* s, int* err) {
     PyObject* obj = PyUnicode_FromString(s);
     if (obj == NULL) {
         if (PyErr_ExceptionMatches(PyExc_MemoryError)) {
@@ -88,8 +67,7 @@ static FNFCIALLOC(cb_alloc) { return PyMem_RawMalloc(cb); }
 
 static FNFCIFREE(cb_free) { PyMem_RawFree(memory); }
 
-static FNFCIOPEN(cb_open)
-{
+static FNFCIOPEN(cb_open) {
     wchar_t* ws = utf8_to_wchar(pszFile, err);
     if (ws == NULL) {
         return -1;
@@ -101,40 +79,35 @@ static FNFCIOPEN(cb_open)
     return result;
 }
 
-static FNFCIREAD(cb_read)
-{
+static FNFCIREAD(cb_read) {
     UINT result = (UINT)_read((int)hf, memory, cb);
     if (result != cb)
         *err = errno;
     return result;
 }
 
-static FNFCIWRITE(cb_write)
-{
+static FNFCIWRITE(cb_write) {
     UINT result = (UINT)_write((int)hf, memory, cb);
     if (result != cb)
         *err = errno;
     return result;
 }
 
-static FNFCICLOSE(cb_close)
-{
+static FNFCICLOSE(cb_close) {
     int result = _close((int)hf);
     if (result != 0)
         *err = errno;
     return result;
 }
 
-static FNFCISEEK(cb_seek)
-{
+static FNFCISEEK(cb_seek) {
     long result = (long)_lseek((int)hf, dist, seektype);
     if (result == -1)
         *err = errno;
     return result;
 }
 
-static FNFCIDELETE(cb_delete)
-{
+static FNFCIDELETE(cb_delete) {
     wchar_t* ws = utf8_to_wchar(pszFile, err);
     if (ws == NULL) {
         return -1;
@@ -148,8 +121,7 @@ static FNFCIDELETE(cb_delete)
 
 static FNFCIFILEPLACED(cb_fileplaced) { return 0; }
 
-static FNFCIGETTEMPFILE(cb_gettempfile)
-{
+static FNFCIGETTEMPFILE(cb_gettempfile) {
     char* name = _tempnam("", "tmp");
     if ((name != NULL) && ((int)strlen(name) < cbTempName)) {
         strcpy(pszTempName, name);
@@ -162,8 +134,7 @@ static FNFCIGETTEMPFILE(cb_gettempfile)
     return FALSE;
 }
 
-static FNFCISTATUS(cb_status)
-{
+static FNFCISTATUS(cb_status) {
     if (pv) {
         PyObject* result
             = PyObject_CallMethod(pv, "status", "iii", typeStatus, cb1, cb2);
@@ -174,8 +145,7 @@ static FNFCISTATUS(cb_status)
     return 0;
 }
 
-static FNFCIGETNEXTCABINET(cb_getnextcabinet)
-{
+static FNFCIGETNEXTCABINET(cb_getnextcabinet) {
     if (pv) {
         PyObject* result
             = PyObject_CallMethod(pv, "getnextcabinet", "i", pccab->iCab);
@@ -194,8 +164,7 @@ static FNFCIGETNEXTCABINET(cb_getnextcabinet)
     return FALSE;
 }
 
-static FNFCIGETOPENINFO(cb_getopeninfo)
-{
+static FNFCIGETOPENINFO(cb_getopeninfo) {
     BY_HANDLE_FILE_INFORMATION bhfi;
     FILETIME filetime;
     HANDLE handle;
@@ -232,22 +201,7 @@ static FNFCIGETOPENINFO(cb_getopeninfo)
     return result;
 }
 
-/*[clinic input]
-_msi.FCICreate
-    cabname: str
-        the name of the CAB file
-    files: object
-        a list of tuples, each containing the name of the file on disk,
-        and the name of the file inside the CAB file
-    /
-
-Create a new CAB file.
-[clinic start generated code]*/
-
-static PyObject* _msi_FCICreate_impl(
-    PyObject* module, const char* cabname, PyObject* files)
-/*[clinic end generated code: output=55dc05728361b799 input=1d2d75fdc8b44b71]*/
-{
+static PyObject* _msi_FCICreate_impl(PyObject* module, const char* cabname, PyObject* files) {
     const char* p;
     CCAB ccab;
     HFCI hfci;
@@ -336,15 +290,13 @@ typedef struct msiobj {
     PyObject_HEAD MSIHANDLE h;
 } msiobj;
 
-static void msiobj_dealloc(msiobj* msidb)
-{
+static void msiobj_dealloc(msiobj* msidb) {
     MsiCloseHandle(msidb->h);
     msidb->h = 0;
     PyObject_Free(msidb);
 }
 
-static PyObject* msierror(int status)
-{
+static PyObject* msierror(int status) {
     int code;
     char buf[2000];
     char* res = buf;
@@ -400,17 +352,685 @@ static PyObject* msierror(int status)
     return NULL;
 }
 
-#include "include/_msi.h"
+// Add _PyArg_NoPositional and _PyArg_BadArgument (Python 3.13.0b2+)
+#define Py_BUILD_CORE
+#if PY_VERSION_HEX >= 0x030D00B2
+#include <internal/pycore_modsupport.h>
+#endif
 
-/*[clinic input]
-_msi.Database.Close
+// Compatible _PyCFunction_CAST (Python 3.10)
+#ifndef _PyCFunction_CAST
+#define _PyCFunction_CAST(func) ((PyCFunctionObject*)func)
+#endif
 
-Close the database object.
-[clinic start generated code]*/
+#define _MSI_SENTINEL { NULL, NULL }
 
-static PyObject* _msi_Database_Close_impl(msiobj* self)
-/*[clinic end generated code: output=ddf2d7712ea804f1 input=104330ce4a486187]*/
-{
+PyDoc_STRVAR(_msi_UuidCreate__doc__,
+    "UuidCreate($module, /)\n"
+    "--\n"
+    "\n"
+    "Return the string representation of a new unique identifier.");
+
+#define _MSI_UUIDCREATE_METHODDEF                                             \
+    { "UuidCreate", (PyCFunction)_msi_UuidCreate, METH_NOARGS,                \
+        _msi_UuidCreate__doc__ }
+
+static PyObject* _msi_UuidCreate_impl(PyObject* module);
+
+static PyObject* _msi_UuidCreate(
+    PyObject* module, PyObject* Py_UNUSED(ignored)) {
+    return _msi_UuidCreate_impl(module);
+}
+
+PyDoc_STRVAR(_msi_FCICreate__doc__,
+    "FCICreate($module, cabname, files, /)\n"
+    "--\n"
+    "\n"
+    "Create a new CAB file.\n"
+    "\n"
+    "  cabname\n"
+    "    the name of the CAB file\n"
+    "  files\n"
+    "    a list of tuples, each containing the name of the file on disk,\n"
+    "    and the name of the file inside the CAB file");
+
+#define _MSI_FCICREATE_METHODDEF                                              \
+    { "FCICreate", _PyCFunction_CAST(_msi_FCICreate), METH_FASTCALL,          \
+        _msi_FCICreate__doc__ }
+
+static PyObject* _msi_FCICreate(
+    PyObject* module, PyObject* const* args, Py_ssize_t nargs) {
+    PyObject* return_value = NULL;
+    const char* cabname;
+    PyObject* files;
+
+    if (!_PyArg_CheckPositional("FCICreate", nargs, 2, 2)) {
+        goto exit;
+    }
+    if (!PyUnicode_Check(args[0])) {
+        _PyArg_BadArgument("FCICreate", "argument 1", "str", args[0]);
+        goto exit;
+    }
+    Py_ssize_t cabname_length;
+    cabname = PyUnicode_AsUTF8AndSize(args[0], &cabname_length);
+    if (cabname == NULL) {
+        goto exit;
+    }
+    if (strlen(cabname) != (size_t)cabname_length) {
+        PyErr_SetString(PyExc_ValueError, "embedded null character");
+        goto exit;
+    }
+    files = args[1];
+    return_value = _msi_FCICreate_impl(module, cabname, files);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_Database_Close__doc__,
+    "Close($self, /)\n"
+    "--\n"
+    "\n"
+    "Close the database object.");
+
+#define _MSI_DATABASE_CLOSE_METHODDEF                                         \
+    { "Close", (PyCFunction)_msi_Database_Close, METH_NOARGS,                 \
+        _msi_Database_Close__doc__ }
+
+static PyObject* _msi_Database_Close_impl(msiobj* self);
+
+static PyObject* _msi_Database_Close(
+    msiobj* self, PyObject* Py_UNUSED(ignored)) {
+    return _msi_Database_Close_impl(self);
+}
+
+PyDoc_STRVAR(_msi_Record_GetFieldCount__doc__,
+    "GetFieldCount($self, /)\n"
+    "--\n"
+    "\n"
+    "Return the number of fields of the record.");
+
+#define _MSI_RECORD_GETFIELDCOUNT_METHODDEF                                   \
+    { "GetFieldCount", (PyCFunction)_msi_Record_GetFieldCount, METH_NOARGS,   \
+        _msi_Record_GetFieldCount__doc__ }
+
+static PyObject* _msi_Record_GetFieldCount_impl(msiobj* self);
+
+static PyObject* _msi_Record_GetFieldCount(
+    msiobj* self, PyObject* Py_UNUSED(ignored)) {
+    return _msi_Record_GetFieldCount_impl(self);
+}
+
+PyDoc_STRVAR(_msi_Record_GetInteger__doc__,
+    "GetInteger($self, field, /)\n"
+    "--\n"
+    "\n"
+    "Return the value of field as an integer where possible.");
+
+#define _MSI_RECORD_GETINTEGER_METHODDEF                                      \
+    { "GetInteger", (PyCFunction)_msi_Record_GetInteger, METH_O,              \
+        _msi_Record_GetInteger__doc__ }
+
+static PyObject* _msi_Record_GetInteger_impl(msiobj* self, unsigned int field);
+
+static PyObject* _msi_Record_GetInteger(msiobj* self, PyObject* arg) {
+    PyObject* return_value = NULL;
+    unsigned int field;
+
+    field = (unsigned int)PyLong_AsUnsignedLongMask(arg);
+    if (field == (unsigned int)-1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    return_value = _msi_Record_GetInteger_impl(self, field);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_Record_GetString__doc__,
+    "GetString($self, field, /)\n"
+    "--\n"
+    "\n"
+    "Return the value of field as a string where possible.");
+
+#define _MSI_RECORD_GETSTRING_METHODDEF                                       \
+    { "GetString", (PyCFunction)_msi_Record_GetString, METH_O,                \
+        _msi_Record_GetString__doc__ }
+
+static PyObject* _msi_Record_GetString_impl(msiobj* self, unsigned int field);
+
+static PyObject* _msi_Record_GetString(msiobj* self, PyObject* arg) {
+    PyObject* return_value = NULL;
+    unsigned int field;
+
+    field = (unsigned int)PyLong_AsUnsignedLongMask(arg);
+    if (field == (unsigned int)-1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    return_value = _msi_Record_GetString_impl(self, field);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_Record_ClearData__doc__,
+    "ClearData($self, /)\n"
+    "--\n"
+    "\n"
+    "Set all fields of the record to 0.");
+
+#define _MSI_RECORD_CLEARDATA_METHODDEF                                       \
+    { "ClearData", (PyCFunction)_msi_Record_ClearData, METH_NOARGS,           \
+        _msi_Record_ClearData__doc__ }
+
+static PyObject* _msi_Record_ClearData_impl(msiobj* self);
+
+static PyObject* _msi_Record_ClearData(
+    msiobj* self, PyObject* Py_UNUSED(ignored)) {
+    return _msi_Record_ClearData_impl(self);
+}
+
+PyDoc_STRVAR(_msi_Record_SetString__doc__,
+    "SetString($self, field, value, /)\n"
+    "--\n"
+    "\n"
+    "Set field to a string value.");
+
+#define _MSI_RECORD_SETSTRING_METHODDEF                                       \
+    { "SetString", _PyCFunction_CAST(_msi_Record_SetString), METH_FASTCALL,   \
+        _msi_Record_SetString__doc__ }
+
+static PyObject* _msi_Record_SetString_impl(
+    msiobj* self, int field, const wchar_t* value);
+
+static PyObject* _msi_Record_SetString(
+    msiobj* self, PyObject* const* args, Py_ssize_t nargs) {
+    PyObject* return_value = NULL;
+    int field;
+    const wchar_t* value = NULL;
+
+    if (!_PyArg_CheckPositional("SetString", nargs, 2, 2)) {
+        goto exit;
+    }
+    field = PyLong_AsInt(args[0]);
+    if (field == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    if (!PyUnicode_Check(args[1])) {
+        _PyArg_BadArgument("SetString", "argument 2", "str", args[1]);
+        goto exit;
+    }
+    value = PyUnicode_AsWideCharString(args[1], NULL);
+    if (value == NULL) {
+        goto exit;
+    }
+    return_value = _msi_Record_SetString_impl(self, field, value);
+
+exit:
+    /* Cleanup for value */
+    PyMem_Free((void*)value);
+
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_Record_SetStream__doc__,
+    "SetStream($self, field, value, /)\n"
+    "--\n"
+    "\n"
+    "Set field to the contents of the file named value.");
+
+#define _MSI_RECORD_SETSTREAM_METHODDEF                                       \
+    { "SetStream", _PyCFunction_CAST(_msi_Record_SetStream), METH_FASTCALL,   \
+        _msi_Record_SetStream__doc__ }
+
+static PyObject* _msi_Record_SetStream_impl(
+    msiobj* self, int field, const wchar_t* value);
+
+static PyObject* _msi_Record_SetStream(
+    msiobj* self, PyObject* const* args, Py_ssize_t nargs) {
+    PyObject* return_value = NULL;
+    int field;
+    const wchar_t* value = NULL;
+
+    if (!_PyArg_CheckPositional("SetStream", nargs, 2, 2)) {
+        goto exit;
+    }
+    field = PyLong_AsInt(args[0]);
+    if (field == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    if (!PyUnicode_Check(args[1])) {
+        _PyArg_BadArgument("SetStream", "argument 2", "str", args[1]);
+        goto exit;
+    }
+    value = PyUnicode_AsWideCharString(args[1], NULL);
+    if (value == NULL) {
+        goto exit;
+    }
+    return_value = _msi_Record_SetStream_impl(self, field, value);
+
+exit:
+    /* Cleanup for value */
+    PyMem_Free((void*)value);
+
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_Record_SetInteger__doc__,
+    "SetInteger($self, field, value, /)\n"
+    "--\n"
+    "\n"
+    "Set field to an integer value.");
+
+#define _MSI_RECORD_SETINTEGER_METHODDEF                                      \
+    { "SetInteger", _PyCFunction_CAST(_msi_Record_SetInteger), METH_FASTCALL, \
+        _msi_Record_SetInteger__doc__ }
+
+static PyObject* _msi_Record_SetInteger_impl(
+    msiobj* self, int field, int value);
+
+static PyObject* _msi_Record_SetInteger(
+    msiobj* self, PyObject* const* args, Py_ssize_t nargs) {
+    PyObject* return_value = NULL;
+    int field;
+    int value;
+
+    if (!_PyArg_CheckPositional("SetInteger", nargs, 2, 2)) {
+        goto exit;
+    }
+    field = PyLong_AsInt(args[0]);
+    if (field == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    value = PyLong_AsInt(args[1]);
+    if (value == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    return_value = _msi_Record_SetInteger_impl(self, field, value);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_SummaryInformation_GetProperty__doc__,
+    "GetProperty($self, field, /)\n"
+    "--\n"
+    "\n"
+    "Return a property of the summary.\n"
+    "\n"
+    "  field\n"
+    "    the name of the property, one of the PID_* constants");
+
+#define _MSI_SUMMARYINFORMATION_GETPROPERTY_METHODDEF                         \
+    { "GetProperty", (PyCFunction)_msi_SummaryInformation_GetProperty,        \
+        METH_O, _msi_SummaryInformation_GetProperty__doc__ }
+
+static PyObject* _msi_SummaryInformation_GetProperty_impl(
+    msiobj* self, int field);
+
+static PyObject* _msi_SummaryInformation_GetProperty(
+    msiobj* self, PyObject* arg) {
+    PyObject* return_value = NULL;
+    int field;
+
+    field = PyLong_AsInt(arg);
+    if (field == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    return_value = _msi_SummaryInformation_GetProperty_impl(self, field);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_SummaryInformation_GetPropertyCount__doc__,
+    "GetPropertyCount($self, /)\n"
+    "--\n"
+    "\n"
+    "Return the number of summary properties.");
+
+#define _MSI_SUMMARYINFORMATION_GETPROPERTYCOUNT_METHODDEF                    \
+    { "GetPropertyCount",                                                     \
+        (PyCFunction)_msi_SummaryInformation_GetPropertyCount, METH_NOARGS,   \
+        _msi_SummaryInformation_GetPropertyCount__doc__ }
+
+static PyObject* _msi_SummaryInformation_GetPropertyCount_impl(msiobj* self);
+
+static PyObject* _msi_SummaryInformation_GetPropertyCount(
+    msiobj* self, PyObject* Py_UNUSED(ignored)) {
+    return _msi_SummaryInformation_GetPropertyCount_impl(self);
+}
+
+PyDoc_STRVAR(_msi_SummaryInformation_SetProperty__doc__,
+    "SetProperty($self, field, value, /)\n"
+    "--\n"
+    "\n"
+    "Set a property.\n"
+    "\n"
+    "  field\n"
+    "    the name of the property, one of the PID_* constants\n"
+    "  value\n"
+    "    the new value of the property (integer or string)");
+
+#define _MSI_SUMMARYINFORMATION_SETPROPERTY_METHODDEF                         \
+    { "SetProperty", _PyCFunction_CAST(_msi_SummaryInformation_SetProperty),  \
+        METH_FASTCALL, _msi_SummaryInformation_SetProperty__doc__ }
+
+static PyObject* _msi_SummaryInformation_SetProperty_impl(
+    msiobj* self, int field, PyObject* data);
+
+static PyObject* _msi_SummaryInformation_SetProperty(
+    msiobj* self, PyObject* const* args, Py_ssize_t nargs) {
+    PyObject* return_value = NULL;
+    int field;
+    PyObject* data;
+
+    if (!_PyArg_CheckPositional("SetProperty", nargs, 2, 2)) {
+        goto exit;
+    }
+    field = PyLong_AsInt(args[0]);
+    if (field == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    data = args[1];
+    return_value = _msi_SummaryInformation_SetProperty_impl(self, field, data);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_SummaryInformation_Persist__doc__,
+    "Persist($self, /)\n"
+    "--\n"
+    "\n"
+    "Write the modified properties to the summary information stream.");
+
+#define _MSI_SUMMARYINFORMATION_PERSIST_METHODDEF                             \
+    { "Persist", (PyCFunction)_msi_SummaryInformation_Persist, METH_NOARGS,   \
+        _msi_SummaryInformation_Persist__doc__ }
+
+static PyObject* _msi_SummaryInformation_Persist_impl(msiobj* self);
+
+static PyObject* _msi_SummaryInformation_Persist(
+    msiobj* self, PyObject* Py_UNUSED(ignored)) {
+    return _msi_SummaryInformation_Persist_impl(self);
+}
+
+PyDoc_STRVAR(_msi_View_Execute__doc__,
+    "Execute($self, params, /)\n"
+    "--\n"
+    "\n"
+    "Execute the SQL query of the view.\n"
+    "\n"
+    "  params\n"
+    "    a record describing actual values of the parameter tokens\n"
+    "    in the query or None");
+
+#define _MSI_VIEW_EXECUTE_METHODDEF                                           \
+    { "Execute", (PyCFunction)_msi_View_Execute, METH_O,                      \
+        _msi_View_Execute__doc__ }
+
+PyDoc_STRVAR(_msi_View_Fetch__doc__,
+    "Fetch($self, /)\n"
+    "--\n"
+    "\n"
+    "Return a result record of the query.");
+
+#define _MSI_VIEW_FETCH_METHODDEF                                             \
+    { "Fetch", (PyCFunction)_msi_View_Fetch, METH_NOARGS,                     \
+        _msi_View_Fetch__doc__ }
+
+static PyObject* _msi_View_Fetch_impl(msiobj* self);
+
+static PyObject* _msi_View_Fetch(msiobj* self, PyObject* Py_UNUSED(ignored)) {
+    return _msi_View_Fetch_impl(self);
+}
+
+PyDoc_STRVAR(_msi_View_GetColumnInfo__doc__,
+    "GetColumnInfo($self, kind, /)\n"
+    "--\n"
+    "\n"
+    "Return a record describing the columns of the view.\n"
+    "\n"
+    "  kind\n"
+    "    MSICOLINFO_NAMES or MSICOLINFO_TYPES");
+
+#define _MSI_VIEW_GETCOLUMNINFO_METHODDEF                                     \
+    { "GetColumnInfo", (PyCFunction)_msi_View_GetColumnInfo, METH_O,          \
+        _msi_View_GetColumnInfo__doc__ }
+
+static PyObject* _msi_View_GetColumnInfo_impl(msiobj* self, int kind);
+
+static PyObject* _msi_View_GetColumnInfo(msiobj* self, PyObject* arg) {
+    PyObject* return_value = NULL;
+    int kind;
+
+    kind = PyLong_AsInt(arg);
+    if (kind == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    return_value = _msi_View_GetColumnInfo_impl(self, kind);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_View_Modify__doc__,
+    "Modify($self, kind, data, /)\n"
+    "--\n"
+    "\n"
+    "Modify the view.\n"
+    "\n"
+    "  kind\n"
+    "    one of the MSIMODIFY_* constants\n"
+    "  data\n"
+    "    a record describing the new data");
+
+#define _MSI_VIEW_MODIFY_METHODDEF                                            \
+    { "Modify", _PyCFunction_CAST(_msi_View_Modify), METH_FASTCALL,           \
+        _msi_View_Modify__doc__ }
+
+static PyObject* _msi_View_Modify_impl(msiobj* self, int kind, PyObject* data);
+
+static PyObject* _msi_View_Modify(
+    msiobj* self, PyObject* const* args, Py_ssize_t nargs) {
+    PyObject* return_value = NULL;
+    int kind;
+    PyObject* data;
+
+    if (!_PyArg_CheckPositional("Modify", nargs, 2, 2)) {
+        goto exit;
+    }
+    kind = PyLong_AsInt(args[0]);
+    if (kind == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    data = args[1];
+    return_value = _msi_View_Modify_impl(self, kind, data);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_View_Close__doc__,
+    "Close($self, /)\n"
+    "--\n"
+    "\n"
+    "Close the view.");
+
+#define _MSI_VIEW_CLOSE_METHODDEF                                             \
+    { "Close", (PyCFunction)_msi_View_Close, METH_NOARGS,                     \
+        _msi_View_Close__doc__ }
+
+static PyObject* _msi_View_Close_impl(msiobj* self);
+
+static PyObject* _msi_View_Close(msiobj* self, PyObject* Py_UNUSED(ignored)) {
+    return _msi_View_Close_impl(self);
+}
+
+PyDoc_STRVAR(_msi_Database_OpenView__doc__,
+    "OpenView($self, sql, /)\n"
+    "--\n"
+    "\n"
+    "Return a view object.\n"
+    "\n"
+    "  sql\n"
+    "    the SQL statement to execute");
+
+#define _MSI_DATABASE_OPENVIEW_METHODDEF                                      \
+    { "OpenView", (PyCFunction)_msi_Database_OpenView, METH_O,                \
+        _msi_Database_OpenView__doc__ }
+
+static PyObject* _msi_Database_OpenView_impl(msiobj* self, const wchar_t* sql);
+
+static PyObject* _msi_Database_OpenView(msiobj* self, PyObject* arg) {
+    PyObject* return_value = NULL;
+    const wchar_t* sql = NULL;
+
+    if (!PyUnicode_Check(arg)) {
+        _PyArg_BadArgument("OpenView", "argument", "str", arg);
+        goto exit;
+    }
+    sql = PyUnicode_AsWideCharString(arg, NULL);
+    if (sql == NULL) {
+        goto exit;
+    }
+    return_value = _msi_Database_OpenView_impl(self, sql);
+
+exit:
+    /* Cleanup for sql */
+    PyMem_Free((void*)sql);
+
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_Database_Commit__doc__,
+    "Commit($self, /)\n"
+    "--\n"
+    "\n"
+    "Commit the changes pending in the current transaction.");
+
+#define _MSI_DATABASE_COMMIT_METHODDEF                                        \
+    { "Commit", (PyCFunction)_msi_Database_Commit, METH_NOARGS,               \
+        _msi_Database_Commit__doc__ }
+
+static PyObject* _msi_Database_Commit_impl(msiobj* self);
+
+static PyObject* _msi_Database_Commit(
+    msiobj* self, PyObject* Py_UNUSED(ignored)) {
+    return _msi_Database_Commit_impl(self);
+}
+
+PyDoc_STRVAR(_msi_Database_GetSummaryInformation__doc__,
+    "GetSummaryInformation($self, count, /)\n"
+    "--\n"
+    "\n"
+    "Return a new summary information object.\n"
+    "\n"
+    "  count\n"
+    "    the maximum number of updated values");
+
+#define _MSI_DATABASE_GETSUMMARYINFORMATION_METHODDEF                         \
+    { "GetSummaryInformation",                                                \
+        (PyCFunction)_msi_Database_GetSummaryInformation, METH_O,             \
+        _msi_Database_GetSummaryInformation__doc__ }
+
+static PyObject* _msi_Database_GetSummaryInformation_impl(
+    msiobj* self, int count);
+
+static PyObject* _msi_Database_GetSummaryInformation(
+    msiobj* self, PyObject* arg) {
+    PyObject* return_value = NULL;
+    int count;
+
+    count = PyLong_AsInt(arg);
+    if (count == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    return_value = _msi_Database_GetSummaryInformation_impl(self, count);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_OpenDatabase__doc__,
+    "OpenDatabase($module, path, persist, /)\n"
+    "--\n"
+    "\n"
+    "Return a new database object.\n"
+    "\n"
+    "  path\n"
+    "    the file name of the MSI file\n"
+    "  persist\n"
+    "    the persistence mode");
+
+#define _MSI_OPENDATABASE_METHODDEF                                           \
+    { "OpenDatabase", _PyCFunction_CAST(_msi_OpenDatabase), METH_FASTCALL,    \
+        _msi_OpenDatabase__doc__ }
+
+static PyObject* _msi_OpenDatabase_impl(
+    PyObject* module, const wchar_t* path, int persist);
+
+static PyObject* _msi_OpenDatabase(
+    PyObject* module, PyObject* const* args, Py_ssize_t nargs) {
+    PyObject* return_value = NULL;
+    const wchar_t* path = NULL;
+    int persist;
+
+    if (!_PyArg_CheckPositional("OpenDatabase", nargs, 2, 2)) {
+        goto exit;
+    }
+    if (!PyUnicode_Check(args[0])) {
+        _PyArg_BadArgument("OpenDatabase", "argument 1", "str", args[0]);
+        goto exit;
+    }
+    path = PyUnicode_AsWideCharString(args[0], NULL);
+    if (path == NULL) {
+        goto exit;
+    }
+    persist = PyLong_AsInt(args[1]);
+    if (persist == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    return_value = _msi_OpenDatabase_impl(module, path, persist);
+
+exit:
+    /* Cleanup for path */
+    PyMem_Free((void*)path);
+
+    return return_value;
+}
+
+PyDoc_STRVAR(_msi_CreateRecord__doc__,
+    "CreateRecord($module, count, /)\n"
+    "--\n"
+    "\n"
+    "Return a new record object.\n"
+    "\n"
+    "  count\n"
+    "    the number of fields of the record");
+
+#define _MSI_CREATERECORD_METHODDEF                                           \
+    { "CreateRecord", (PyCFunction)_msi_CreateRecord, METH_O,                 \
+        _msi_CreateRecord__doc__ }
+
+static PyObject* _msi_CreateRecord_impl(PyObject* module, int count);
+
+static PyObject* _msi_CreateRecord(PyObject* module, PyObject* arg) {
+    PyObject* return_value = NULL;
+    int count;
+
+    count = PyLong_AsInt(arg);
+    if (count == -1 && PyErr_Occurred()) {
+        goto exit;
+    }
+    return_value = _msi_CreateRecord_impl(module, count);
+
+exit:
+    return return_value;
+}
+
+static PyObject* _msi_Database_Close_impl(msiobj* self) {
     int status;
     if ((status = MsiCloseHandle(self->h)) != ERROR_SUCCESS) {
         return msierror(status);
@@ -420,30 +1040,11 @@ static PyObject* _msi_Database_Close_impl(msiobj* self)
 }
 
 /*************************** Record objects **********************/
-
-/*[clinic input]
-_msi.Record.GetFieldCount
-
-Return the number of fields of the record.
-[clinic start generated code]*/
-
-static PyObject* _msi_Record_GetFieldCount_impl(msiobj* self)
-/*[clinic end generated code: output=112795079c904398 input=5fb9d4071b28897b]*/
-{
+static PyObject* _msi_Record_GetFieldCount_impl(msiobj* self) {
     return PyLong_FromLong(MsiRecordGetFieldCount(self->h));
 }
 
-/*[clinic input]
-_msi.Record.GetInteger
-    field: unsigned_int(bitwise=True)
-    /
-
-Return the value of field as an integer where possible.
-[clinic start generated code]*/
-
-static PyObject* _msi_Record_GetInteger_impl(msiobj* self, unsigned int field)
-/*[clinic end generated code: output=7174ebb6e8ed1c79 input=d19209947e2bfe61]*/
-{
+static PyObject* _msi_Record_GetInteger_impl(msiobj* self, unsigned int field) {
     int status;
 
     status = MsiRecordGetInteger(self->h, field);
@@ -454,17 +1055,7 @@ static PyObject* _msi_Record_GetInteger_impl(msiobj* self, unsigned int field)
     return PyLong_FromLong((long)status);
 }
 
-/*[clinic input]
-_msi.Record.GetString
-    field: unsigned_int(bitwise=True)
-    /
-
-Return the value of field as a string where possible.
-[clinic start generated code]*/
-
-static PyObject* _msi_Record_GetString_impl(msiobj* self, unsigned int field)
-/*[clinic end generated code: output=f670d1b484cfa47c input=ffa11f21450b77d8]*/
-{
+static PyObject* _msi_Record_GetString_impl(msiobj* self, unsigned int field) {
     unsigned int status;
     WCHAR buf[2000];
     WCHAR* res = buf;
@@ -486,15 +1077,7 @@ static PyObject* _msi_Record_GetString_impl(msiobj* self, unsigned int field)
     return string;
 }
 
-/*[clinic input]
-_msi.Record.ClearData
-
-Set all fields of the record to 0.
-[clinic start generated code]*/
-
-static PyObject* _msi_Record_ClearData_impl(msiobj* self)
-/*[clinic end generated code: output=1891467214b977f4 input=2a911c95aaded102]*/
-{
+static PyObject* _msi_Record_ClearData_impl(msiobj* self) {
     int status = MsiRecordClearData(self->h);
     if (status != ERROR_SUCCESS)
         return msierror(status);
@@ -502,19 +1085,8 @@ static PyObject* _msi_Record_ClearData_impl(msiobj* self)
     Py_RETURN_NONE;
 }
 
-/*[clinic input]
-_msi.Record.SetString
-    field: int
-    value: wchar_t
-    /
-
-Set field to a string value.
-[clinic start generated code]*/
-
 static PyObject* _msi_Record_SetString_impl(
-    msiobj* self, int field, const wchar_t* value)
-/*[clinic end generated code: output=2e37505b0f11f985 input=fb8ec70a2a6148e0]*/
-{
+    msiobj* self, int field, const wchar_t* value) {
     int status;
 
     if ((status = MsiRecordSetStringW(self->h, field, value)) != ERROR_SUCCESS)
@@ -523,19 +1095,8 @@ static PyObject* _msi_Record_SetString_impl(
     Py_RETURN_NONE;
 }
 
-/*[clinic input]
-_msi.Record.SetStream
-    field: int
-    value: wchar_t
-    /
-
-Set field to the contents of the file named value.
-[clinic start generated code]*/
-
 static PyObject* _msi_Record_SetStream_impl(
-    msiobj* self, int field, const wchar_t* value)
-/*[clinic end generated code: output=442facac16913b48 input=a07aa19b865e8292]*/
-{
+    msiobj* self, int field, const wchar_t* value) {
     int status;
 
     if ((status = MsiRecordSetStreamW(self->h, field, value)) != ERROR_SUCCESS)
@@ -544,19 +1105,9 @@ static PyObject* _msi_Record_SetStream_impl(
     Py_RETURN_NONE;
 }
 
-/*[clinic input]
-_msi.Record.SetInteger
-    field: int
-    value: int
-    /
-
-Set field to an integer value.
-[clinic start generated code]*/
 
 static PyObject* _msi_Record_SetInteger_impl(
-    msiobj* self, int field, int value)
-/*[clinic end generated code: output=669e8647775d0ce7 input=c571aa775e7e451b]*/
-{
+    msiobj* self, int field, int value) {
     int status;
 
     if ((status = MsiRecordSetInteger(self->h, field, value)) != ERROR_SUCCESS)
@@ -614,8 +1165,7 @@ static PyTypeObject record_Type = {
     0,                          /*tp_is_gc*/
 };
 
-static PyObject* record_new(MSIHANDLE h)
-{
+static PyObject* record_new(MSIHANDLE h) {
     msiobj* result = PyObject_New(struct msiobj, &record_Type);
 
     if (!result) {
@@ -628,20 +1178,8 @@ static PyObject* record_new(MSIHANDLE h)
 }
 
 /*************************** SummaryInformation objects **************/
-
-/*[clinic input]
-_msi.SummaryInformation.GetProperty
-    field: int
-        the name of the property, one of the PID_* constants
-    /
-
-Return a property of the summary.
-[clinic start generated code]*/
-
 static PyObject* _msi_SummaryInformation_GetProperty_impl(
-    msiobj* self, int field)
-/*[clinic end generated code: output=f8946a33ee14f6ef input=f8dfe2c890d6cb8b]*/
-{
+    msiobj* self, int field) {
     int status;
     PyObject* result;
     UINT type;
@@ -691,15 +1229,7 @@ static PyObject* _msi_SummaryInformation_GetProperty_impl(
     return result;
 }
 
-/*[clinic input]
-_msi.SummaryInformation.GetPropertyCount
-
-Return the number of summary properties.
-[clinic start generated code]*/
-
-static PyObject* _msi_SummaryInformation_GetPropertyCount_impl(msiobj* self)
-/*[clinic end generated code: output=68e94b2aeee92b3d input=2e71e985586d82dc]*/
-{
+static PyObject* _msi_SummaryInformation_GetPropertyCount_impl(msiobj* self) {
     int status;
     UINT result;
 
@@ -710,21 +1240,8 @@ static PyObject* _msi_SummaryInformation_GetPropertyCount_impl(msiobj* self)
     return PyLong_FromLong(result);
 }
 
-/*[clinic input]
-_msi.SummaryInformation.SetProperty
-    field: int
-        the name of the property, one of the PID_* constants
-    value as data: object
-        the new value of the property (integer or string)
-    /
-
-Set a property.
-[clinic start generated code]*/
-
 static PyObject* _msi_SummaryInformation_SetProperty_impl(
-    msiobj* self, int field, PyObject* data)
-/*[clinic end generated code: output=3d4692c8984bb675 input=f2a7811b905abbed]*/
-{
+    msiobj* self, int field, PyObject* data) {
     int status;
 
     if (PyUnicode_Check(data)) {
@@ -753,15 +1270,8 @@ static PyObject* _msi_SummaryInformation_SetProperty_impl(
     Py_RETURN_NONE;
 }
 
-/*[clinic input]
-_msi.SummaryInformation.Persist
 
-Write the modified properties to the summary information stream.
-[clinic start generated code]*/
-
-static PyObject* _msi_SummaryInformation_Persist_impl(msiobj* self)
-/*[clinic end generated code: output=c564bd17f5e122c9 input=e3dda9d530095ef7]*/
-{
+static PyObject* _msi_SummaryInformation_Persist_impl(msiobj* self) {
     int status;
 
     status = MsiSummaryInfoPersist(self->h);
@@ -820,20 +1330,7 @@ static PyTypeObject summary_Type = {
 };
 
 /*************************** View objects **************/
-
-/*[clinic input]
-_msi.View.Execute
-    params as oparams: object
-        a record describing actual values of the parameter tokens
-        in the query or None
-    /
-
-Execute the SQL query of the view.
-[clinic start generated code]*/
-
-static PyObject* _msi_View_Execute(msiobj* self, PyObject* oparams)
-/*[clinic end generated code: output=f0f65fd2900bcb4e input=cb163a15d453348e]*/
-{
+static PyObject* _msi_View_Execute(msiobj* self, PyObject* oparams) {
     int status;
     MSIHANDLE params = 0;
 
@@ -853,15 +1350,8 @@ static PyObject* _msi_View_Execute(msiobj* self, PyObject* oparams)
     Py_RETURN_NONE;
 }
 
-/*[clinic input]
-_msi.View.Fetch
 
-Return a result record of the query.
-[clinic start generated code]*/
-
-static PyObject* _msi_View_Fetch_impl(msiobj* self)
-/*[clinic end generated code: output=ba154a3794537d4e input=7f3e3d06c449001c]*/
-{
+static PyObject* _msi_View_Fetch_impl(msiobj* self) {
     int status;
     MSIHANDLE result;
 
@@ -875,18 +1365,8 @@ static PyObject* _msi_View_Fetch_impl(msiobj* self)
     return record_new(result);
 }
 
-/*[clinic input]
-_msi.View.GetColumnInfo
-    kind: int
-        MSICOLINFO_NAMES or MSICOLINFO_TYPES
-    /
 
-Return a record describing the columns of the view.
-[clinic start generated code]*/
-
-static PyObject* _msi_View_GetColumnInfo_impl(msiobj* self, int kind)
-/*[clinic end generated code: output=e7c1697db9403660 input=afedb892bf564a3b]*/
-{
+static PyObject* _msi_View_GetColumnInfo_impl(msiobj* self, int kind) {
     int status;
     MSIHANDLE result;
 
@@ -897,20 +1377,7 @@ static PyObject* _msi_View_GetColumnInfo_impl(msiobj* self, int kind)
     return record_new(result);
 }
 
-/*[clinic input]
-_msi.View.Modify
-    kind: int
-        one of the MSIMODIFY_* constants
-    data: object
-        a record describing the new data
-    /
-
-Modify the view.
-[clinic start generated code]*/
-
-static PyObject* _msi_View_Modify_impl(msiobj* self, int kind, PyObject* data)
-/*[clinic end generated code: output=69aaf3ce8ddac0ba input=2828de22de0d47b4]*/
-{
+static PyObject* _msi_View_Modify_impl(msiobj* self, int kind, PyObject* data) {
     int status;
 
     if (!Py_IS_TYPE(data, &record_Type)) {
@@ -925,15 +1392,8 @@ static PyObject* _msi_View_Modify_impl(msiobj* self, int kind, PyObject* data)
     Py_RETURN_NONE;
 }
 
-/*[clinic input]
-_msi.View.Close
 
-Close the view.
-[clinic start generated code]*/
-
-static PyObject* _msi_View_Close_impl(msiobj* self)
-/*[clinic end generated code: output=488f7b8645ca104a input=de6927d1308c401c]*/
-{
+static PyObject* _msi_View_Close_impl(msiobj* self) {
     int status;
 
     if ((status = MsiViewClose(self->h)) != ERROR_SUCCESS)
@@ -991,18 +1451,8 @@ static PyTypeObject msiview_Type = {
 
 /*************************** Database objects **************/
 
-/*[clinic input]
-_msi.Database.OpenView
-    sql: wchar_t
-        the SQL statement to execute
-    /
 
-Return a view object.
-[clinic start generated code]*/
-
-static PyObject* _msi_Database_OpenView_impl(msiobj* self, const wchar_t* sql)
-/*[clinic end generated code: output=e712e6a11229abfd input=50f1771f37e500df]*/
-{
+static PyObject* _msi_Database_OpenView_impl(msiobj* self, const wchar_t* sql) {
     int status;
     MSIHANDLE hView;
     msiobj* result;
@@ -1020,15 +1470,8 @@ static PyObject* _msi_Database_OpenView_impl(msiobj* self, const wchar_t* sql)
     return (PyObject*)result;
 }
 
-/*[clinic input]
-_msi.Database.Commit
 
-Commit the changes pending in the current transaction.
-[clinic start generated code]*/
-
-static PyObject* _msi_Database_Commit_impl(msiobj* self)
-/*[clinic end generated code: output=f33021feb8b0cdd8 input=375bb120d402266d]*/
-{
+static PyObject* _msi_Database_Commit_impl(msiobj* self) {
     int status;
 
     if ((status = MsiDatabaseCommit(self->h)) != ERROR_SUCCESS)
@@ -1037,19 +1480,9 @@ static PyObject* _msi_Database_Commit_impl(msiobj* self)
     Py_RETURN_NONE;
 }
 
-/*[clinic input]
-_msi.Database.GetSummaryInformation
-    count: int
-        the maximum number of updated values
-    /
-
-Return a new summary information object.
-[clinic start generated code]*/
 
 static PyObject* _msi_Database_GetSummaryInformation_impl(
-    msiobj* self, int count)
-/*[clinic end generated code: output=781e51a4ea4da847 input=18a899ead6521735]*/
-{
+    msiobj* self, int count) {
     int status;
     MSIHANDLE result;
     msiobj* oresult;
@@ -1126,21 +1559,9 @@ static PyTypeObject msidb_Type = {
         && Py_NOT_PERSIST(x, MSIDBOPEN_CREATE)                                \
         && Py_NOT_PERSIST(x, MSIDBOPEN_CREATEDIRECT))
 
-/*[clinic input]
-_msi.OpenDatabase
-    path: wchar_t
-        the file name of the MSI file
-    persist: int
-        the persistence mode
-    /
-
-Return a new database object.
-[clinic start generated code]*/
 
 static PyObject* _msi_OpenDatabase_impl(
-    PyObject* module, const wchar_t* path, int persist)
-/*[clinic end generated code: output=d34b7202b745de05 input=1300f3b97659559b]*/
-{
+    PyObject* module, const wchar_t* path, int persist) {
     int status;
     MSIHANDLE h;
     msiobj* result;
@@ -1163,18 +1584,8 @@ static PyObject* _msi_OpenDatabase_impl(
     return (PyObject*)result;
 }
 
-/*[clinic input]
-_msi.CreateRecord
-    count: int
-        the number of fields of the record
-    /
 
-Return a new record object.
-[clinic start generated code]*/
-
-static PyObject* _msi_CreateRecord_impl(PyObject* module, int count)
-/*[clinic end generated code: output=0ba0a00beea3e99e input=53f17d5b5d9b077d]*/
-{
+static PyObject* _msi_CreateRecord_impl(PyObject* module, int count) {
     MSIHANDLE h;
 
     h = MsiCreateRecord(count);
@@ -1193,8 +1604,7 @@ static char msi_doc[] = "Documentation";
 static struct PyModuleDef _msimodule = { PyModuleDef_HEAD_INIT, "_msi",
     msi_doc, -1, msi_methods, NULL, NULL, NULL, NULL };
 
-PyMODINIT_FUNC PyInit__msi(void)
-{
+PyMODINIT_FUNC PyInit__msi(void) {
     PyObject* m;
 
     m = PyModule_Create(&_msimodule);
